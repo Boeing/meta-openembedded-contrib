@@ -5,7 +5,7 @@ SRC_URI = "git://github.com/shr-project/com.webos.app.minimal;protocol=https;bra
     npmsw://${THISDIR}/${BPN}/npm-shrinkwrap.json \
 "
 
-DEPENDS = "nodejs-native"
+DEPENDS = "nodejs-native strace-native"
 
 #export PSEUDO_DEBUG = "nfoPcvdDyerpswikVx"
 
@@ -18,7 +18,7 @@ do_compile() {
 }
 
 do_install() {
-    DEBUG=* NODE_DEBUG_NATIVE=* NODE_DEBUG=* ${STAGING_BINDIR_NATIVE}/node --trace-event-categories=node.fs.sync,node.fs.async,node,v8,node.async_hooks,node.bootstrap,node.console,node.threadpoolwork.sync,node.threadpoolwork.async,node.environment,node.fs_dir.sync,node.fs_dir.async,node.promises.rejections,node.vm.script node_modules/webpack-cli/bin/cli.js -o ${D}/test
+    DEBUG=* NODE_DEBUG_NATIVE=* NODE_DEBUG=* strace -f -v ${STAGING_BINDIR_NATIVE}/node --trace-event-categories=node.fs.sync,node.fs.async,node,v8,node.async_hooks,node.bootstrap,node.console,node.threadpoolwork.sync,node.threadpoolwork.async,node.environment,node.fs_dir.sync,node.fs_dir.async,node.promises.rejections,node.vm.script node_modules/webpack-cli/bin/cli.js -o ${D}/test
 }
 
 FILES:${PN} += "test"
