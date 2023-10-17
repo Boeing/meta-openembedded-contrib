@@ -1,10 +1,10 @@
 LICENSE = "CLOSED"
 
-SRCREV = "ce88f5da60aa1665e37208d153656a3b7cea1b88"
-SRC_URI = "git://github.com/shr-project/com.webos.app.minimal;protocol=https;branch=master"
+SRCREV = "b63c3934878be75e53713c5ec1cae3d12a87088d"
+SRC_URI = "git://github.com/shr-project/com.webos.app.minimal;protocol=https;branch=webpack"
 S = "${WORKDIR}/git"
 
-DEPENDS = "enact-dev-native nodejs-native"
+DEPENDS = "nodejs-native"
 
 export PSEUDO_DEBUG = "nfoPcvdDyerpswikVx"
 
@@ -18,7 +18,7 @@ do_compile() {
 }
 
 do_install() {
-    ${STAGING_BINDIR_NATIVE}/node ${STAGING_DIR_NATIVE}/opt/cli/bin/enact.js pack -o ${D}/test
+    NODE_DEBUG=* ${STAGING_BINDIR_NATIVE}/node node_modules/webpack-cli/bin/cli.js -o ${D}/test
 }
 
 FILES:${PN} += "test"
