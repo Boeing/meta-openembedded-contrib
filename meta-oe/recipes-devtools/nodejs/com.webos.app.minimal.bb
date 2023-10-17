@@ -1,7 +1,9 @@
 LICENSE = "CLOSED"
 
 SRCREV = "b63c3934878be75e53713c5ec1cae3d12a87088d"
-SRC_URI = "git://github.com/shr-project/com.webos.app.minimal;protocol=https;branch=webpack"
+SRC_URI = "git://github.com/shr-project/com.webos.app.minimal;protocol=https;branch=webpack \
+    npmsw://${THISDIR}/${BPN}/npm-shrinkwrap.json \
+"
 S = "${WORKDIR}/git"
 
 DEPENDS = "nodejs-native"
@@ -12,9 +14,8 @@ do_configure() {
     :
 }
 
-do_compile[network] = "1"
 do_compile() {
-    ${STAGING_BINDIR_NATIVE}/npm install
+    :
 }
 
 do_install() {
