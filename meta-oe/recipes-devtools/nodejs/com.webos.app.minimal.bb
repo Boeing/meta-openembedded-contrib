@@ -8,7 +8,7 @@ S = "${WORKDIR}/git"
 
 DEPENDS = "nodejs-native"
 
-export PSEUDO_DEBUG = "nfoPcvdDyerpswikVx"
+#export PSEUDO_DEBUG = "nfoPcvdDyerpswikVx"
 
 do_configure() {
     :
@@ -19,7 +19,7 @@ do_compile() {
 }
 
 do_install() {
-    NODE_DEBUG=* ${STAGING_BINDIR_NATIVE}/node node_modules/webpack-cli/bin/cli.js -o ${D}/test
+    NODE_DEBUG_NATIVE=* NODE_DEBUG=* ${STAGING_BINDIR_NATIVE}/node --trace-event-categories=node.fs.sync,node.fs.async,node,v8,node.async_hooks,node.bootstrap,node.console,node.threadpoolwork.sync,node.threadpoolwork.async,node.environment,node.fs_dir.sync,node.fs_dir.async,node.promises.rejections,node.vm.script node_modules/webpack-cli/bin/cli.js -o ${D}/test
 }
 
 FILES:${PN} += "test"
