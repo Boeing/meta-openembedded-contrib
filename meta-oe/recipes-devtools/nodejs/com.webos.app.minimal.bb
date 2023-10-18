@@ -18,8 +18,19 @@ do_compile() {
     :
 }
 
+#PSEUDO_IGNORE_PATHS = ""
+
 do_install() {
-    DEBUG=* NODE_DEBUG_NATIVE=* NODE_DEBUG=* strace -f -v ${STAGING_BINDIR_NATIVE}/node --trace-event-categories=node.fs.sync,node.fs.async,node,v8,node.async_hooks,node.bootstrap,node.console,node.threadpoolwork.sync,node.threadpoolwork.async,node.environment,node.fs_dir.sync,node.fs_dir.async,node.promises.rejections,node.vm.script node_modules/webpack-cli/bin/cli.js -o ${D}/test
+cat >webpack.config.js <<EOF
+module.exports = {
+  infrastructureLogging: {
+    level: 'verbose',
+    debug: true,
+  },
+  stats: 'verbose'
+};
+EOF
+    DEBUG=* NODE_DEBUG_NATIVE=* NODE_DEBUG=* strace -f -v ${STAGING_BINDIR_NATIVE}/node --trace-event-categories=node.fs.sync,node.fs.async,node,v8,node.async_hooks,node.bootstrap,node.console,node.threadpoolwork.sync,node.threadpoolwork.async,node.environment,node.fs_dir.sync,node.fs_dir.async,node.promises.rejections,node.vm.script node_modules/webpack-cli/bin/cli.js -o ${D}/test --mode=production --json=compilation-stats.json
 }
 
 FILES:${PN} += "test"
