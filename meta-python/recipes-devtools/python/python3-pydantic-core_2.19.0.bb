@@ -8,9 +8,7 @@ HOMEPAGE = "https://github.com/pydantic/pydantic-core"
 LICENSE = "MIT"
 LIC_FILES_CHKSUM = "file://LICENSE;md5=ab599c188b4a314d2856b3a55030c75c"
 
-SRC_URI += "file://0001-Bumps-pyo3-https-github.com-pyo3-pyo3-from-0.20.2-to.patch \
-            file://0001-Fix-generate_self_schema-for-Python-3.12-1299.patch"
-SRC_URI[sha256sum] = "1cac689f80a3abab2d3c0048b29eea5751114054f032a941a32de4c852c59cad"
+SRC_URI[sha256sum] = "9ad77f1aecedef233390eff7fd643fe652e5ac92b793329424c2a1d2e28c08d1"
 
 DEPENDS = "python3-maturin-native python3-typing-extensions"
 
@@ -27,13 +25,16 @@ INSANE_SKIP:${PN} = "already-stripped"
 inherit ptest
 SRC_URI += "file://run-ptest"
 RDEPENDS:${PN}-ptest += "\
+    python3-dateutil \
     python3-dirty-equals \
     python3-hypothesis \
     python3-pytest \
     python3-pytest-mock \
     python3-pytest-timeout \
     python3-pytest-benchmark \
+    python3-tzdata \
     python3-unittest-automake-output \
+    python3-zoneinfo \
 "
 
 do_install_ptest() {
