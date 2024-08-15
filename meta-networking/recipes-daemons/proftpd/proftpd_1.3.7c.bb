@@ -23,7 +23,7 @@ S = "${WORKDIR}/git"
 
 inherit autotools-brokensep useradd update-rc.d systemd multilib_script
 
-EXTRA_OECONF += "--enable-largefile"
+EXTRA_OECONF += "--enable-largefile INSTALL=install"
 
 PACKAGECONFIG ??= "shadow \
                    ${@bb.utils.filter('DISTRO_FEATURES', 'ipv6 pam', d)} \
@@ -72,6 +72,12 @@ do_configure () {
     install -m 0755 ${STAGING_DATADIR_NATIVE}/gnu-config/config.guess ${S}
     install -m 0755 ${STAGING_DATADIR_NATIVE}/gnu-config/config.sub ${S}
     oe_runconf
+    sed -e 's|--sysroot=${STAGING_DIR_HOST}||g' \
+        -e 's|${STAGING_DIR_NATIVE}||g' \
+        -e 's|-ffile-prefix-map=[^ ]*||g' \
+        -e 's|-fdebug-prefix-map=[^ ]*||g' \
+        -e 's|-fmacro-prefix-map=[^ ]*||g' \
+        -i ${B}/config.h
 }
 
 FTPUSER = "ftp"
@@ -118,7 +124,7 @@ do_install () {
         -e 's|-ffile-prefix-map=[^ ]*||g' \
         -e 's|-fdebug-prefix-map=[^ ]*||g' \
         -e 's|-fmacro-prefix-map=[^ ]*||g' \
-        -i ${D}/${bindir}/prxs
+        -i ${D}/${bindir}/prxs ${D}${includedir}/proftpd/Make.rules ${D}${includedir}/proftpd/config.h 
 
     # ftpmail perl script, which reads the proftpd log file and sends
     # automatic email notifications once an upload finishs,
