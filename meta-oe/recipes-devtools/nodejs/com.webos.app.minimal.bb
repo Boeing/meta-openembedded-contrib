@@ -25,3 +25,7 @@ FILES:${PN} += "test"
 # to make sure this isn't cached in sstate-cache after showing just a warning in package_qa
 # http://errors.yoctoproject.org/Errors/Details/739941/
 ERROR_QA:append = " host-user-contaminated"
+
+# buildpaths in "sources" tmp/work/core2-64-oe-linux/com.webos.app.minimal/1.0/package/test/main.js.map
+# https://github.com/webpack/webpack/issues/15274
+ERROR_QA:remove = " buildpaths"
