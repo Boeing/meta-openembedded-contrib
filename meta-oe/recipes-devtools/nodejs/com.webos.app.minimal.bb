@@ -5,7 +5,7 @@ SRC_URI = "git://github.com/shr-project/com.webos.app.minimal;protocol=https;bra
     npmsw://${THISDIR}/${BPN}/npm-shrinkwrap.json;destsuffix=git \
 "
 
-DEPENDS = "nodejs-native strace-native"
+DEPENDS = "nodejs-native"
 
 do_configure() {
     :
@@ -17,7 +17,7 @@ do_compile() {
 
 do_install() {
     export UV_USE_IO_URING=0
-    strace -ff -v ${STAGING_BINDIR_NATIVE}/node node_modules/webpack-cli/bin/cli.js -o ${D}/test
+    ${STAGING_BINDIR_NATIVE}/node node_modules/webpack-cli/bin/cli.js -o ${D}/test
 }
 
 FILES:${PN} += "test"
