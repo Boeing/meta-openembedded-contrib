@@ -1,23 +1,23 @@
 LICENSE = "CLOSED"
 
-SRCREV = "b63c3934878be75e53713c5ec1cae3d12a87088d"
-SRC_URI = "git://github.com/shr-project/com.webos.app.minimal;protocol=https;branch=webpack \
-    npmsw://${THISDIR}/${BPN}/npm-shrinkwrap.json;destsuffix=git \
-"
+SRCREV = "ce88f5da60aa1665e37208d153656a3b7cea1b88"
+SRC_URI = "git://github.com/shr-project/com.webos.app.minimal;protocol=https;branch=master"
 
-DEPENDS = "nodejs-native"
+DEPENDS = "enact-dev-native nodejs-native"
+
+export PSEUDO_DEBUG = "nfoPcvdDyerpswikVx"
 
 do_configure() {
     :
 }
 
+do_compile[network] = "1"
 do_compile() {
-    :
+    ${STAGING_BINDIR_NATIVE}/npm install
 }
 
 do_install() {
-    export UV_USE_IO_URING=0
-    ${STAGING_BINDIR_NATIVE}/node node_modules/webpack-cli/bin/cli.js -o ${D}/test
+    ${STAGING_BINDIR_NATIVE}/node ${STAGING_DIR_NATIVE}/opt/cli/bin/enact.js pack -o ${D}/test
 }
 
 FILES:${PN} += "test"
