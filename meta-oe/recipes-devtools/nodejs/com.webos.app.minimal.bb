@@ -2,7 +2,7 @@ LICENSE = "CLOSED"
 
 SRCREV = "b63c3934878be75e53713c5ec1cae3d12a87088d"
 SRC_URI = "git://github.com/shr-project/com.webos.app.minimal;protocol=https;branch=webpack \
-    npmsw://${THISDIR}/${BPN}/npm-shrinkwrap.json \
+    npmsw://${THISDIR}/${BPN}/npm-shrinkwrap.json;destsuffix=git \
 "
 
 DEPENDS = "nodejs-native strace-native"
