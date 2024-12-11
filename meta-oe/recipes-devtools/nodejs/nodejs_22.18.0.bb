@@ -27,7 +27,9 @@ SRC_URI = "https://nodejs.org/dist/v${PV}/node-v${PV}.tar.xz \
            file://system-c-ares.patch \
            file://0001-liftoff-Correct-function-signatures.patch \
            file://libatomic.patch \
-           file://0001-deps-disable-io_uring-support-in-libuv.patch \
+           file://0001-Revert-deps-update-libuv-to-1.49.1.patch \
+           file://0002-Revert-lib-add-UV_UDP_REUSEPORT-for-udp.patch \
+           file://0003-Revert-net-add-UV_TCP_REUSEPORT-for-tcp.patch \
            file://0001-positional-args.patch \
            file://0001-custom-env.patch \
            file://0001-build-remove-redundant-mXX-flags-for-V8.patch \
