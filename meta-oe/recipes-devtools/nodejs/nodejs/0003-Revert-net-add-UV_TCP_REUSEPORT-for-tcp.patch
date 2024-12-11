@@ -1,0 +1,258 @@
+From 5a637b4c93509157d6dd4382b07a46baa9a044e0 Mon Sep 17 00:00:00 2001
+From: Martin Jansa <martin.jansa@gmail.com>
+Date: Wed, 11 Dec 2024 11:59:00 +0100
+Subject: [PATCH] Revert "net: add UV_TCP_REUSEPORT for tcp"
+
+This reverts commit 1628c48ad608fd0fd229dd3dbab7617b61deedef.
+
+Upstream-Status: Pending
+---
+ lib/net.js                                    | 22 +++--------
+ src/tcp_wrap.cc                               | 10 ++---
+ test/common/net.js                            | 23 -----------
+ .../test-child-process-net-reuseport.js       | 35 -----------------
+ test/parallel/test-cluster-net-reuseport.js   | 38 -------------------
+ test/parallel/test-net-reuseport.js           | 24 ------------
+ 6 files changed, 9 insertions(+), 143 deletions(-)
+ delete mode 100644 test/common/net.js
+ delete mode 100644 test/parallel/test-child-process-net-reuseport.js
+ delete mode 100644 test/parallel/test-cluster-net-reuseport.js
+ delete mode 100644 test/parallel/test-net-reuseport.js
+
+diff --git a/lib/net.js b/lib/net.js
+index e438c1c8e78..5a6f53aede4 100644
+--- a/lib/net.js
++++ b/lib/net.js
+@@ -164,15 +164,8 @@ const {
+ } = require('internal/perf/observe');
+ const { getDefaultHighWaterMark } = require('internal/streams/state');
+ 
+-function getFlags(options) {
+-  let flags = 0;
+-  if (options.ipv6Only === true) {
+-    flags |= TCPConstants.UV_TCP_IPV6ONLY;
+-  }
+-  if (options.reusePort === true) {
+-    flags |= TCPConstants.UV_TCP_REUSEPORT;
+-  }
+-  return flags;
++function getFlags(ipv6Only) {
++  return ipv6Only === true ? TCPConstants.UV_TCP_IPV6ONLY : 0;
+ }
+ 
+ function createHandle(fd, is_server) {
+@@ -1840,12 +1833,12 @@ function createServerHandle(address, port, addressType, fd, flags) {
+       if (err) {
+         handle.close();
+         // Fallback to ipv4
+-        return createServerHandle(DEFAULT_IPV4_ADDR, port, undefined, undefined, flags);
++        return createServerHandle(DEFAULT_IPV4_ADDR, port);
+       }
+     } else if (addressType === 6) {
+       err = handle.bind6(address, port, flags);
+     } else {
+-      err = handle.bind(address, port, flags);
++      err = handle.bind(address, port);
+     }
+   }
+ 
+@@ -2029,7 +2022,7 @@ Server.prototype.listen = function(...args) {
+     toNumber(args.length > 2 && args[2]);  // (port, host, backlog)
+ 
+   options = options._handle || options.handle || options;
+-  const flags = getFlags(options);
++  const flags = getFlags(options.ipv6Only);
+   //  Refresh the id to make the previous call invalid
+   this._listeningId++;
+   // (handle[, backlog][, cb]) where handle is an object with a handle
+@@ -2062,9 +2055,6 @@ Server.prototype.listen = function(...args) {
+   if (typeof options.port === 'number' || typeof options.port === 'string') {
+     validatePort(options.port, 'options.port');
+     backlog = options.backlog || backlogFromArgs;
+-    if (options.reusePort === true) {
+-      options.exclusive = true;
+-    }
+     // start TCP server listening on host:port
+     if (options.host) {
+       lookupAndListen(this, options.port | 0, options.host, backlog,
+@@ -2072,7 +2062,7 @@ Server.prototype.listen = function(...args) {
+     } else { // Undefined host, listens on unspecified address
+       // Default addressType 4 will be used to search for primary server
+       listenInCluster(this, null, options.port | 0, 4,
+-                      backlog, undefined, options.exclusive, flags);
++                      backlog, undefined, options.exclusive);
+     }
+     return this;
+   }
+diff --git a/src/tcp_wrap.cc b/src/tcp_wrap.cc
+index d80de135c26..6c70f270baf 100644
+--- a/src/tcp_wrap.cc
++++ b/src/tcp_wrap.cc
+@@ -123,7 +123,6 @@ void TCPWrap::Initialize(Local<Object> target,
+   NODE_DEFINE_CONSTANT(constants, SOCKET);
+   NODE_DEFINE_CONSTANT(constants, SERVER);
+   NODE_DEFINE_CONSTANT(constants, UV_TCP_IPV6ONLY);
+-  NODE_DEFINE_CONSTANT(constants, UV_TCP_REUSEPORT);
+   target->Set(context,
+               env->constants_string(),
+               constants).Check();
+@@ -247,12 +246,9 @@ void TCPWrap::Bind(
+   int port;
+   unsigned int flags = 0;
+   if (!args[1]->Int32Value(env->context()).To(&port)) return;
+-  if (args.Length() >= 3 && args[2]->IsUint32()) {
+-    if (!args[2]->Uint32Value(env->context()).To(&flags)) return;
+-    // Can not set IPV6 flags on IPV4 socket
+-    if (family == AF_INET) {
+-      flags &= ~UV_TCP_IPV6ONLY;
+-    }
++  if (family == AF_INET6 &&
++      !args[2]->Uint32Value(env->context()).To(&flags)) {
++    return;
+   }
+ 
+   T addr;
+diff --git a/test/common/net.js b/test/common/net.js
+deleted file mode 100644
+index 84eddd0966e..00000000000
+--- a/test/common/net.js
++++ /dev/null
+@@ -1,23 +0,0 @@
+-'use strict';
+-const net = require('net');
+-
+-const options = { port: 0, reusePort: true };
+-
+-function checkSupportReusePort() {
+-  return new Promise((resolve, reject) => {
+-    const server = net.createServer().listen(options);
+-    server.on('listening', () => {
+-      server.close(resolve);
+-    });
+-    server.on('error', (err) => {
+-      console.log('The `reusePort` option is not supported:', err.message);
+-      server.close();
+-      reject(err);
+-    });
+-  });
+-}
+-
+-module.exports = {
+-  checkSupportReusePort,
+-  options,
+-};
+diff --git a/test/parallel/test-child-process-net-reuseport.js b/test/parallel/test-child-process-net-reuseport.js
+deleted file mode 100644
+index 52309edd1b3..00000000000
+--- a/test/parallel/test-child-process-net-reuseport.js
++++ /dev/null
+@@ -1,35 +0,0 @@
+-'use strict';
+-const common = require('../common');
+-const { checkSupportReusePort, options } = require('../common/net');
+-const assert = require('assert');
+-const child_process = require('child_process');
+-const net = require('net');
+-
+-if (!process.env.isWorker) {
+-  checkSupportReusePort().then(() => {
+-    const server = net.createServer();
+-    server.listen(options, common.mustCall(() => {
+-      const port = server.address().port;
+-      const workerOptions = { env: { ...process.env, isWorker: 1, port } };
+-      let count = 2;
+-      for (let i = 0; i < 2; i++) {
+-        const worker = child_process.fork(__filename, workerOptions);
+-        worker.on('exit', common.mustCall((code) => {
+-          assert.strictEqual(code, 0);
+-          if (--count === 0) {
+-            server.close();
+-          }
+-        }));
+-      }
+-    }));
+-  }, () => {
+-    common.skip('The `reusePort` option is not supported');
+-  });
+-  return;
+-}
+-
+-const server = net.createServer();
+-
+-server.listen({ ...options, port: +process.env.port }, common.mustCall(() => {
+-  server.close();
+-}));
+diff --git a/test/parallel/test-cluster-net-reuseport.js b/test/parallel/test-cluster-net-reuseport.js
+deleted file mode 100644
+index b875490d61f..00000000000
+--- a/test/parallel/test-cluster-net-reuseport.js
++++ /dev/null
+@@ -1,38 +0,0 @@
+-'use strict';
+-const common = require('../common');
+-
+-const { checkSupportReusePort, options } = require('../common/net');
+-const assert = require('assert');
+-const cluster = require('cluster');
+-const net = require('net');
+-
+-if (cluster.isPrimary) {
+-  checkSupportReusePort().then(() => {
+-    cluster.fork().on('exit', common.mustCall((code) => {
+-      assert.strictEqual(code, 0);
+-    }));
+-  }, () => {
+-    common.skip('The `reusePort` option is not supported');
+-  });
+-  return;
+-}
+-
+-let waiting = 2;
+-function close() {
+-  if (--waiting === 0)
+-    cluster.worker.disconnect();
+-}
+-
+-const server1 = net.createServer();
+-const server2 = net.createServer();
+-
+-// Test if the worker requests the main process to create a socket
+-cluster._getServer = common.mustNotCall();
+-
+-server1.listen(options, common.mustCall(() => {
+-  const port = server1.address().port;
+-  server2.listen({ ...options, port }, common.mustCall(() => {
+-    server1.close(close);
+-    server2.close(close);
+-  }));
+-}));
+diff --git a/test/parallel/test-net-reuseport.js b/test/parallel/test-net-reuseport.js
+deleted file mode 100644
+index 3b7fc100be7..00000000000
+--- a/test/parallel/test-net-reuseport.js
++++ /dev/null
+@@ -1,24 +0,0 @@
+-'use strict';
+-const common = require('../common');
+-const { checkSupportReusePort, options } = require('../common/net');
+-const net = require('net');
+-
+-function test(host) {
+-  const server1 = net.createServer();
+-  const server2 = net.createServer();
+-  server1.listen({ ...options, host }, common.mustCall(() => {
+-    const port = server1.address().port;
+-    server2.listen({ ...options, host, port }, common.mustCall(() => {
+-      server1.close();
+-      server2.close();
+-    }));
+-  }));
+-}
+-
+-checkSupportReusePort()
+-.then(() => {
+-  test('127.0.0.1');
+-  common.hasIPv6 && test('::');
+-}, () => {
+-  common.skip('The `reusePort` option is not supported');
+-});
