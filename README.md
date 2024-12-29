@@ -1,3 +1,7 @@
+Scarthgap-nut: [![Scarthgap-nut status](https://gitlab.com/akuster/meta-openembedded-contrib/badges/stable/scarthgap-nut/pipeline.svg)](https://gitlab.com/akuster/meta-openembedded-contrib/-/commits/stable/scarthgap-nut)
+
+Kirkstone-nut: [![Kirkstone-nut status](https://gitlab.com/akuster/meta-openembedded-contrib/badges/stable/kirkstone-nut/pipeline.svg)](https://gitlab.com/akuster/meta-openembedded-contrib/-/commits/stable/kirkstone-nut)
+
 Collection of layers for the OE-core universe
 
 Main layer maintainer: Armin Kuster <akuster808@gmail.com>
