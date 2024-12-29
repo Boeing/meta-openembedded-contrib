@@ -1,0 +1,152 @@
+variables:
+    OE_BRANCH: ""
+    BUILD_DIR: $STABLE_DIR/build
+    POKY_DIR: $STABLE_DIR/poky
+
+stages:
+     - setup
+     - build
+     - cleanup
+
+prep:
+  stage: setup
+  script:
+    - |
+        export OE_BRANCH=$(echo $CI_COMMIT_BRANCH | sed -e "s:stable/::g" | sed -e "s:-nut::g")
+        echo "$OE_BRANCH"
+        echo "$BUILD_DIR"
+
+        if [ ! -d '$STABLE_DIR' ]; then
+               mkdir -p $STABLE_DIR
+        fi
+
+        if [ ! -d '$BUILD_DIR' ]; then
+               echo "Deleting old build directory. This may take a while"
+               rm -fr $BUILD_DIR
+        fi
+
+        cd $STABLE_DIR
+        rm -fr meta-openembedded-contrib
+        git clone https://git.openembedded.org/meta-openembedded-contrib -b stable/$OE_BRANCH-nut
+
+        rm -fr poky
+        git clone git://git.yoctoproject.org/poky -b $OE_BRANCH
+        cd poky
+
+        source ./oe-init-build-env ${BUILD_DIR}
+
+        # Site config
+        echo SSTATE_DIR = \"/home/build/sstate-cache/$OE_BRANCH\" > conf/site.conf
+        echo DL_DIR = \"/build/downloads/$OE_BRANCH\" >> conf/site.conf
+
+        # local config
+        echo PACKAGE_CLASSES = \"package_rpm\" >> conf/local.conf
+        echo INHERIT += \"report-error rm_work\" >> conf/local.conf
+        echo INHERIT_CLASSES += \"testimage\" >> conf/local.conf
+        echo SOURCE_MIRROR_URL = \"http://downloads.yoctoproject.org/mirror/sources/\" >> conf/local.conf
+        echo BB_TASK_NICE_LEVEL = \"5\" >> conf/local.conf
+        echo BB_TASK_NICE_LEVEL_task-testimage = \"0\" >> conf/local.conf
+        echo BB_TASK_IONICE_LEVEL = \"2.7\" >> conf/local.conf
+        echo BB_TASK_IONICE_LEVEL_task-testimage = \"2.1\" >> conf/local.conf
+        echo BB_NUMBER_THREADS = \"6\" >> conf/local.conf
+        echo PARALLEL_MAKE = \"-j 12\" >> conf/local.conf
+        echo ZSTD_THREADS = \"8\" >> conf/local.conf
+        echo XZ_MEMLIMIT = \"20%\" >> conf/local.conf
+        echo XZ_THREADS = \"8\" >> conf/local.conf
+        echo ERR_REPORT_SERVER = \"errors.yoctoproject.org\" >> conf/local.conf
+        echo ERR_REPORT_PORT = \"80\" >> conf/local.conf
+        echo ERR_REPORT_USERNAME = \"OE stable CI\" >> conf/local.conf
+        echo ERR_REPORT_EMAIL = \"akuster808@gmail.com\" >> conf/local.conf
+        echo DISTRO_FEATURES:remove = \"ptest\" >> conf/local.conf
+        echo PARALLEL_MAKE_pn-nautilus = \"-j 2\"  >> conf/local.conf
+        echo PARALLEL_MAKE_pn-nodejs = \"-j 2\"  >> conf/local.conf
+        echo PARALLEL_MAKE_pn-ninja = \"-j 2\" >> conf/local.conf
+        echo PARALLEL_MAKE_pn-webkitgtk3 = \"-j 2\" >> conf/local.conf
+        echo include exclude_world.inc >> conf/local.conf
+
+        # Exclude from world
+        echo \#LICENSE_FLAGS_ACCEPTED = \"commercial\" > conf/exclude_world.inc
+        echo SKIP_RECIPE[build-appliance-image] = \"tries to include whole downloads directory:\" >> conf/exclude_world.inc
+        echo SKIP_RECIPE[bigbuckbunny-1080p] = \"big and doesn\'t really need to be tested so much\" >> conf/exclude_world.inc
+        echo SKIP_RECIPE[bigbuckbunny-480p] = \"big and doesn\'t really need to be tested so much\" >> conf/exclude_world.inc
+        echo SKIP_RECIPE[bigbuckbunny-720p] = \"big and doesn\'t really need to be tested so much\" >> conf/exclude_world.inc
+        echo SKIP_RECIPE[tearsofsteel-1080p] = \"big and doesn\'t really need to be tested so much\" >> conf/exclude_world.inc
+        echo RDEPENDS:packagegroup-meta-multimedia:remove = \"bigbuckbunny-1080p bigbuckbunny-480p bigbuckbunny-720p tearsofsteel-1080p\" >> conf/exclude_world.inc
+        echo EXCLUDE_FROM_WORLD_pn-wireguard-module = \"0\" >> conf/exclude_world.inc
+
+        # BBlayers
+        echo BBLAYERS += \"$STABLE_DIR/meta-openembedded-contrib/meta-oe\" >> conf/bblayers.conf
+        echo BBLAYERS += \"$STABLE_DIR/meta-openembedded-contrib/meta-python \" >> conf/bblayers.conf
+        echo BBLAYERS += \"$STABLE_DIR/meta-openembedded-contrib/meta-networking \" >> conf/bblayers.conf
+        echo BBLAYERS += \"$STABLE_DIR/meta-openembedded-contrib/meta-perl \" >> conf/bblayers.conf 
+        echo BBLAYERS += \"$STABLE_DIR/meta-openembedded-contrib/meta-gnome \" >> conf/bblayers.conf
+        echo BBLAYERS += \"$STABLE_DIR/meta-openembedded-contrib/meta-initramfs \" >> conf/bblayers.conf
+        echo BBLAYERS += \"$STABLE_DIR/meta-openembedded-contrib/meta-webserver \" >> conf/bblayers.conf
+        echo BBLAYERS += \"$STABLE_DIR/meta-openembedded-contrib/meta-filesystems \" >> conf/bblayers.conf
+        echo BBLAYERS += \"$STABLE_DIR/meta-openembedded-contrib/meta-multimedia \" >> conf/bblayers.conf
+        echo BBLAYERS += \"$STABLE_DIR/meta-openembedded-contrib/meta-xfce \" >> conf/bblayers.conf
+
+.before-build-script: &before-build-script
+        - cd $POKY_DIR
+        - source ./oe-init-build-env ${BUILD_DIR}
+
+.after-stable-script: &after-stable-script
+        - for x in `ls $BUILD_DIR/tmp/log/error-report/ | grep error_report_`; do
+        - $POKY_DIR/scripts/send-error-report -y tmp/log/error-report/$x
+        - done
+        - rm -fr tmp
+
+qemux86-64:
+    stage: build
+    retry: 1
+    before_script:
+        - *before-build-script
+    script:
+        - echo MACHINE = \"qemux86-64\" >> conf/local.conf
+        - bitbake $BUILD_IMAGE
+    after_script:
+        - *after-stable-script
+
+qemuarm64:
+    stage: build
+    retry: 1
+    before_script:
+        - *before-build-script
+    script:
+        - echo MACHINE = \"qemuarm64\" >> conf/local.conf
+        - bitbake $BUILD_IMAGE
+    after_script:
+        - *after-stable-script
+
+qemux86:
+    stage: build
+    retry: 1
+    before_script:
+        - *before-build-script
+    script:
+        - echo MACHINE = \"qemux86\" >> conf/local.conf
+        - bitbake $BUILD_IMAGE
+    after_script:
+        - *after-stable-script
+
+qemuarm:
+    stage: build
+    retry: 1
+    before_script:
+        - *before-build-script
+    script:
+        - echo MACHINE = \"qemuarm64\" >> conf/local.conf
+        - bitbake $BUILD_IMAGE
+    after_script:
+        - *after-stable-script
+
+sstate-cache-mng:
+    stage: cleanup
+    rules:
+        - when: always
+    allow_failure: true
+    before_script:
+        - *before-build-script
+    script:
+        - $POKY_DIR/scripts/sstate-cache-management.py --cache-dir=/home/build/sstate-cache/$OE_BRANCH -d --remove-orphans -y
+
