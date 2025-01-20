@@ -1,0 +1,103 @@
+From 4aaae99a6311534c0d8677ed21ab6eb036ec45dc Mon Sep 17 00:00:00 2001
+From: Martin Jansa <martin.jansa@gmail.com>
+Date: Fri, 17 Jan 2025 15:30:09 +0000
+Subject: [PATCH] CMakeLists.txt: use relative path to .f files
+
+https://github.com/Reference-LAPACK/lapack/issues/1087
+
+Upstream-Status: Pending
+Signed-off-by: Martin Jansa <martin.jansa@gmail.com>
+---
+ BLAS/SRC/CMakeLists.txt       | 4 ++--
+ CBLAS/src/CMakeLists.txt      | 4 ++--
+ SRC/CMakeLists.txt            | 8 ++++----
+ TESTING/MATGEN/CMakeLists.txt | 8 ++++----
+ 4 files changed, 12 insertions(+), 12 deletions(-)
+
+diff --git a/BLAS/SRC/CMakeLists.txt b/BLAS/SRC/CMakeLists.txt
+index b9e6f7c4a..c96c1119d 100644
+--- a/BLAS/SRC/CMakeLists.txt
++++ b/BLAS/SRC/CMakeLists.txt
+@@ -117,7 +117,7 @@ if(BUILD_INDEX64_EXT_API)
+   # Copy files so we can set source property specific to /${BLASLIB}_64_obj target
+   file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${BLASLIB}_64_obj)
+   file(COPY ${SOURCES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/${BLASLIB}_64_obj)
+-  file(GLOB SOURCES_64_F ${CMAKE_CURRENT_BINARY_DIR}/${BLASLIB}_64_obj/*.f*)
++  file(GLOB SOURCES_64_F RELATIVE ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/${BLASLIB}_64_obj/*.f*)
+   add_library(${BLASLIB}_64_obj OBJECT ${SOURCES_64_F})
+   target_compile_options(${BLASLIB}_64_obj PRIVATE ${FOPT_ILP64})
+   set_target_properties(${BLASLIB}_64_obj PROPERTIES POSITION_INDEPENDENT_CODE ON)
+@@ -128,7 +128,7 @@ if(BUILD_INDEX64_EXT_API)
+     else()
+       set_source_files_properties(${F} PROPERTIES COMPILE_FLAGS "-cpp")
+     endif()
+-    file(STRINGS ${F} ${F}.lst)
++    file(STRINGS ${CMAKE_CURRENT_BINARY_DIR}/${F} ${F}.lst)
+     list(FILTER ${F}.lst INCLUDE REGEX "subroutine|SUBROUTINE|external|EXTERNAL|function|FUNCTION")
+     list(FILTER ${F}.lst EXCLUDE REGEX "^!.*")
+     list(FILTER ${F}.lst EXCLUDE REGEX "^[*].*")
+diff --git a/CBLAS/src/CMakeLists.txt b/CBLAS/src/CMakeLists.txt
+index 8dcb2f293..e5ea96e62 100644
+--- a/CBLAS/src/CMakeLists.txt
++++ b/CBLAS/src/CMakeLists.txt
+@@ -137,7 +137,7 @@ if(BUILD_INDEX64_EXT_API)
+   # Copy files so we can set source property specific to /${CBLASLIB}_64_obj target
+   file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${CBLASLIB}_64_fobj)
+   file(COPY ${SOURCES_64_F} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/${CBLASLIB}_64_fobj)
+-  file(GLOB SOURCES_64_F ${CMAKE_CURRENT_BINARY_DIR}/${CBLASLIB}_64_fobj/*)
++  file(GLOB SOURCES_64_F RELATIVE ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/${CBLASLIB}_64_fobj/*)
+   add_library(${CBLASLIB}_64_cobj OBJECT ${SOURCES_64_C})
+   add_library(${CBLASLIB}_64_fobj OBJECT ${SOURCES_64_F})
+   set_target_properties(${CBLASLIB}_64_cobj ${CBLASLIB}_64_fobj PROPERTIES
+@@ -152,7 +152,7 @@ if(BUILD_INDEX64_EXT_API)
+   #Add suffix to all Fortran functions via macros
+   foreach(F IN LISTS SOURCES_64_F)
+       set(COPT_64_F)
+-      file(STRINGS ${F} ${F}.lst)
++      file(STRINGS ${CMAKE_CURRENT_BINARY_DIR}/${F} ${F}.lst)
+       list(FILTER ${F}.lst INCLUDE REGEX "subroutine|external")
+       foreach(FUNC IN LISTS ${F}.lst)
+         string(REGEX REPLACE "[ ]*(subroutine|external)[ ]*" "" FUNC ${FUNC})
+diff --git a/SRC/CMakeLists.txt b/SRC/CMakeLists.txt
+index be426cecd..c39edf5d1 100644
+--- a/SRC/CMakeLists.txt
++++ b/SRC/CMakeLists.txt
+@@ -545,13 +545,13 @@ if(BUILD_INDEX64_EXT_API)
+     set(SOURCES_64)
+     file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${LAPACKLIB}_64_obj)
+     file(COPY ${SOURCES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/${LAPACKLIB}_64_obj)
+-    file(GLOB SOURCES_64 ${CMAKE_CURRENT_BINARY_DIR}/${LAPACKLIB}_64_obj/*.*)
++    file(GLOB SOURCES_64 RELATIVE ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/${LAPACKLIB}_64_obj/*.*)
+     list(REMOVE_ITEM SOURCES_64 la_xisnan.F90)
+     foreach(F IN LISTS SOURCES_64)
+       set(FFILE "")
+-      file(READ ${F} FFILE)
+-      file(WRITE ${F} "#include \"lapack_64.h\"\n")
+-      file(APPEND ${F} "${FFILE}")
++      file(READ ${CMAKE_CURRENT_BINARY_DIR}/${F} FFILE)
++      file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/${F} "#include \"lapack_64.h\"\n")
++      file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/${F} "${FFILE}")
+     endforeach()
+     file(COPY lapack_64.h DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/${LAPACKLIB}_64_obj)
+     add_library(${LAPACKLIB}_64_obj OBJECT ${SOURCES_64})
+diff --git a/TESTING/MATGEN/CMakeLists.txt b/TESTING/MATGEN/CMakeLists.txt
+index 02e05a86d..97d502c57 100644
+--- a/TESTING/MATGEN/CMakeLists.txt
++++ b/TESTING/MATGEN/CMakeLists.txt
+@@ -65,12 +65,12 @@ if(BUILD_INDEX64_EXT_API)
+     set(SOURCES_64)
+     file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${TMGLIB}_64_obj)
+     file(COPY ${SOURCES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/${TMGLIB}_64_obj)
+-    file(GLOB SOURCES_64 ${CMAKE_CURRENT_BINARY_DIR}/${TMGLIB}_64_obj/*.*)
++    file(GLOB SOURCES_64 RELATIVE ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/${TMGLIB}_64_obj/*.*)
+     foreach(F IN LISTS SOURCES_64)
+       set(FFILE "")
+-      file(READ ${F} FFILE)
+-      file(WRITE ${F} "#include \"matgen_64.h\"\n")
+-      file(APPEND ${F} "${FFILE}")
++      file(READ ${CMAKE_CURRENT_BINARY_DIR}/${F} FFILE)
++      file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/${F} "#include \"matgen_64.h\"\n")
++      file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/${F} "${FFILE}")
+     endforeach()
+     file(COPY matgen_64.h DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/${TMGLIB}_64_obj)
+     add_library(${TMGLIB}_64_obj OBJECT ${SOURCES_64})

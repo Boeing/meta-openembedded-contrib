@@ -20,15 +20,24 @@ SRCREV = "5ebe92156143a341ab7b14bf76560d30093cfc54"
 SRC_URI = "git://github.com/Reference-LAPACK/lapack.git;protocol=https;branch=master \
            ${@bb.utils.contains('PTEST_ENABLED', '1', 'file://run-ptest', '', d)} \
           "
+SS="           file://0001-CMakeLists.txt-disable-PREPROCESS.patch \
+           file://0001-CMakeLists.txt-use-relative-path-to-.f-files.patch \
+"
 S = "${WORKDIR}/git"
 
-PACKAGECONFIG ?= ""
+#PACKAGECONFIG ?= ""
+PACKAGECONFIG ?= "cblas"
 PACKAGECONFIG[lapacke] = "-DLAPACKE=ON,-DLAPACKE=OFF"
 PACKAGECONFIG[cblas] = "-DCBLAS=ON,-DCBLAS=OFF"
 
-EXTRA_OECMAKE = " -DBUILD_SHARED_LIBS=ON \
-                  ${@bb.utils.contains('PTEST_ENABLED', '1', ' -DBUILD_TESTING=ON', '', d)} \
-                "
+EXTRA_OECMAKE = "\
+    -DBUILD_SHARED_LIBS=ON \
+    ${@bb.utils.contains('PTEST_ENABLED', '1', ' -DBUILD_TESTING=ON', '', d)} \
+"
+FF = "\
+    -DCMAKE_USE_RELATIVE_PATHS=True \
+    -DCMAKE_Fortran_PREPROCESS=OFF \
+"
 OECMAKE_GENERATOR = "Unix Makefiles"
 
 inherit cmake pkgconfig ptest
