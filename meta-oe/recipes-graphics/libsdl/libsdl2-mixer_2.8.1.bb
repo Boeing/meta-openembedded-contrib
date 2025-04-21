@@ -20,6 +20,8 @@ do_configure:prepend() {
 	touch ${STAGING_BINDIR}/wvtag
 }
 
+EXTRA_OECMAKE += "-DSDL2MIXER_VORBIS=VORBISFILE -DSDL2MIXER_VORBIS_VORBISFILE=ON"
+
 FILES:${PN} += "${datadir}/licenses"
 
 RDEPENDS:${PN} = "fluidsynth-bin wavpack-bin"
